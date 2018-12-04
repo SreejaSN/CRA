@@ -1,0 +1,70 @@
+---
+title: "Initial"
+author: "Sreeja Nair"
+date: "October 17, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(siverse)
+library(tidyverse)
+
+```
+
+```{r load data}
+
+wic <- read.csv("G:/My Drive/SI/CURRENT PROJECTS/CRA Needs Assessment/Data/WIC_Clinics_in_Utah.csv") %>% clean_names()
+
+poverty <- read.csv("G:/My Drive/SI/CURRENT PROJECTS/CRA Needs Assessment/Data/Poverty_data_by_Age__City_and_County_Utah_2013.csv") %>% clean_names()
+
+```
+
+
+
+```{r wic}
+
+# separate address to its components
+
+wic1 <- wic %>% separate(location_1, c("address","city1","geo"), sep = "\\n", remove = FALSE) %>% 
+  separate(city1, c("city","state"), sep="\\,", remove = FALSE )
+
+
+
+```
+
+
+
+```{r poverty}
+
+pov_county <- poverty %>% 
+  mutate(county1 = str_replace_all(county, "[[:punct:]]", "g"))
+
+pov_county1 <- pov_county %>% 
+  group_by(county1) %>% 
+  summarize(avg_median_income = mean(median_household_income, na.rm = TRUE),
+            avg_gini_index = mean(gini_index, na.rm = TRUE),
+            avg_below_poverty_level = mean(below_poverty_level, na.rm = TRUE)) 
+
+pov_county %>% 
+  ggplot(aes(x = county, y = avg_median_income))+
+  geom_bar(stat = "identity")
+
+
+pov_county1 %>% 
+  select(county1) %>% 
+  filter(str_detect(county1,'Sa'))
+
+```
+
+
+
+```{r Thoughts }
+# figure out why the county names won't clean.
+# maybe use this set to join to WIC for city to county match?
+# ggmap? to show all the averages poverty metrics?
+
+```
+
