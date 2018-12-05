@@ -2,22 +2,26 @@
 title: "Initial"
 author: "Sreeja Nair"
 date: "October 17, 2018"
-output: html_document
-editor_options: 
-  chunk_output_type: console
+output:
+  html_document: default
+  word_document: default
+fig_width: 14
+fig_height: 5
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
 library(siverse)
 library(tidyverse)
 library(tidycensus)
 
-SIColors <- c("#741D5A", "#DD9E27", "#33439B", "#ED1C24", "#24420E", "#BB4126", "#AE9B32", "#783545")
+theme_set(theme_minimal())
+theme_update(text = element_text(family = "Roboto"), axis.text = element_text(family = "Roboto"), strip.text = element_text(family = "Roboto"), axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
-```{r load data}
+```{r load data, include=FALSE}
 
 datapath <- path_expand("G:/My Drive/SI/Current Projects/CRA Needs Assessment/WS 2_Analysis of Publicly Available Data/Data/")
 
@@ -29,7 +33,7 @@ education <- read.csv(path(datapath, "Utah_Educational_Level_By_Census_Tract_201
 
 hud <- read.csv(path(datapath, "County_HUD_Data_Utah_2011.csv")) %>% clean_names()
 
-homelessness <- read.csv(path(datapath, "ut_homelessness.csv"))
+homelessness <- read.csv(path(datapath, "ut_homelessness.csv")) 
 
 
 
@@ -37,7 +41,7 @@ homelessness <- read.csv(path(datapath, "ut_homelessness.csv"))
 
 
 
-```{r wic}
+```{r wic, echo=FALSE, message=FALSE, warning=FALSE}
 
 # separate address to its components
 
@@ -51,7 +55,6 @@ wic1 %>%
   geom_bar(stat = "identity")+
   labs(title = " Distribution of WIC Clinics in Utah",
        x = "WIC Clinic Locations", y = "Count")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
   
 #Maps?
@@ -59,7 +62,7 @@ wic1 %>%
 
 
 
-```{r poverty}
+```{r poverty, echo=FALSE}
 
 #Create County dataset
 
@@ -69,15 +72,11 @@ pov_county <- poverty %>%
                              TRUE~county1))
 
 pov_county %>% 
-  distinct(county1) 
-
-pov_county %>% 
   group_by(county1) %>% 
   summarize(avg_median_income = mean(median_household_income, na.rm = TRUE)) %>% 
   ggplot(aes(x = reorder(county1, -avg_median_income), y = avg_median_income, fill = avg_median_income))+
   geom_bar(stat = "identity")+
   labs(title = "Average Median Income by County", x = "County", y = "Average Median Income")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 pov_county %>%  
@@ -86,7 +85,6 @@ pov_county %>%
   ggplot(aes(x = reorder(county1, -avg_gini_index), y = avg_gini_index, fill = avg_gini_index))+
   geom_bar(stat = "identity")+
   labs(title = "Average Gini Index by County", x = "County", y = "Average Gini Index")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
   
 pov_county %>%  
@@ -95,7 +93,6 @@ pov_county %>%
   ggplot(aes(x = reorder(county1, -avg_below_poverty_level), y = avg_below_poverty_level, fill = avg_below_poverty_level))+
   geom_bar(stat = "identity")+
   labs(title = "Average Population Below Poverty Level by County", x = "County", y = "Average Population Below Poverty Level")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 pov_county %>% 
@@ -108,7 +105,6 @@ pov_county %>%
   ggplot(aes(x = reorder(county1, -poverty_rate), y = poverty_rate, fill = poverty_rate))+
   geom_bar(stat = "identity")+
   labs(title = "Average Poverty Rate by County", x = "County", y = "Average Poverty Rate")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
   
 
@@ -172,14 +168,15 @@ pov_city %>%
   ggplot(aes(x = city, y = poverty_rates, fill = sex))+
   geom_bar(stat = "identity", position = "dodge")+
   labs(title = "Distribution of poverty rates of males and females amongst the top 10 cities with highest poverty levels",
-       x = "City", y = "Poverty rates")
+       x = "City", y = "Poverty rates")+
+  scale_fill_manual(values = c("#CF3721","#31a9b8")) #(27.cheerfulbrights-color ref)
   
 
 ```
 
 
 
-```{#r ACS poverty}
+```{r ACS poverty, eval=FALSE, include=FALSE}
 
 pverty2 <- get_acs(geography = "county"
                    variables = "S2201_C01_001E",
@@ -196,7 +193,7 @@ pverty2.2 <- get_acs(geography = "county",
 
 
 
-```{r HUD}
+```{r HUD, echo=FALSE}
 
 hud %>% 
   filter(program_label == "Summary of All HUD Programs") %>% 
@@ -206,7 +203,6 @@ hud %>%
   geom_bar(stat = "identity")+
   labs(title = "Total number of units(all HUD) by County",  
        x = "County", y = "Total Units")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 hud %>% 
@@ -217,7 +213,6 @@ hud %>%
   geom_bar(stat = "identity")+
   labs(title = "Total number of units(LIHTC) by County",  
        x = "County", y = "Total Units")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 hud %>% 
@@ -228,7 +223,6 @@ hud %>%
   geom_bar(stat = "identity")+
   labs(title = "Total number of units(Housing Choice Vouchers) by County",  
        x = "County", y = "Total Units")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 
@@ -240,7 +234,6 @@ hud %>%
   geom_bar(stat = "identity")+
   labs(title = "Percent Occupied (all HUD) by County",  
        x = "County", y = "Percent Occupied")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 hud %>% 
@@ -251,7 +244,6 @@ hud %>%
   geom_bar(stat = "identity")+
   labs(title = "Percent Occupied(Housing Choice Vouchers) by County",  
        x = "County", y = "Percent Occupied")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
   
 
@@ -263,7 +255,6 @@ hud %>%
   ggplot(aes(x=reorder(name,-rent_as_pct_income), y = rent_as_pct_income, fill =rent_as_pct_income))+
   geom_bar(stat = "identity")+
   labs(title = "Rent as percent of income", x = "County", y="Percentage")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 
@@ -274,7 +265,6 @@ hud %>%
   ggplot(aes(x=reorder(name,-months_waiting), y = months_waiting, fill =months_waiting))+
   geom_bar(stat = "identity")+
   labs(title = "Months waiting (all HUD)", x = "County", y="Months")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")  
 
 hud %>% 
@@ -284,7 +274,6 @@ hud %>%
   ggplot(aes(x=reorder(name,-months_from_movein), y = months_from_movein, fill =months_from_movein))+
   geom_bar(stat = "identity")+
   labs(title = "Months from move in (all HUD)", x = "County", y="Months")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 hud %>% 
@@ -294,7 +283,6 @@ hud %>%
   ggplot(aes(x=reorder(name,-pct_minority), y = pct_minority, fill =pct_minority))+
   geom_bar(stat = "identity")+
   labs(title = "Percent minority (all HUD)", x = "County", y="percentage")+
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))+
   scale_fill_gradient(low = "red", high = "darkred")
 
 
@@ -303,8 +291,86 @@ hud %>%
 ```
 
 
+```{r homelessness, echo=FALSE}
 
-```{#r education}
+homelessness %>% 
+  filter(category == "Sheltered Headcount", type == "Total") %>% 
+  select(county, x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>%
+  ggplot(aes(x = years, y = count, color = county))+
+  geom_line(size =1) +
+  labs(title = "Sheltered homeless headcounts over time", 
+       x = "Years", y = "Sheltered Homeless Headcount")
+
+homelessness %>% 
+  filter(category == "Sheltered Household", type == "Total") %>% 
+  select(county, x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>%
+  ggplot(aes(x = years, y = count, color = county))+
+  geom_line(size =1) +
+  labs(title = "Sheltered homeless households over time", 
+       x = "Years", y = "Sheltered Homeless Households")
+
+
+homelessness %>% 
+  filter(category == "Unsheltered Headcount", type == "Total") %>% 
+  select(county, x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>%
+  ggplot(aes(x = years, y = count, color = county))+
+  geom_line(size =1) +
+  labs(title = "Unsheltered homeless headcount over time", 
+       x = "Years", y = "Unsheltered Homeless Headcount")
+ 
+homelessness %>% 
+  filter(category == "Unsheltered Household", type == "Total") %>% 
+  select(county, x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>%
+  ggplot(aes(x = years, y = count, color = county))+
+  geom_line(size =1) +
+  labs(title = "Unsheltered homeless households over time", 
+       x = "Years", y = "Unsheltered Homeless Households")
+  
+homelessness %>% 
+  filter(county=="Salt Lake",
+         type=="Total",
+         !str_detect(category,"Total")) %>% 
+  select(category,x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>% 
+  ggplot(aes(x = years, y = count, color = category))+
+  geom_line(size =1)+
+  labs(title = "Salt Lake County over time", x = "Years", y = "Counts")
+
+
+```
+
+
+
+```{r education, eval=FALSE, include=FALSE}
 
 edu <- education %>% 
   separate(geography,c("census_tract","county"),sep = "\\,", remove = FALSE)
