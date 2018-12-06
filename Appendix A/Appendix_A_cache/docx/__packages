@@ -23,3 +23,5 @@ stringr
 forcats
 tidycensus
 bindrcpp
+tigris
+scales

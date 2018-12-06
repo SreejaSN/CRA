@@ -20,12 +20,14 @@ editor_options:
 library(siverse)
 library(tidyverse)
 library(tidycensus)
+library(tigris)
+library(scales)
 
 theme_set(theme_minimal())
 theme_update(text = element_text(family = "Roboto"), axis.text = element_text(family = "Roboto"), strip.text = element_text(family = "Roboto"), axis.text.x = element_text(angle = 45, hjust = 1))
+options(scipen = 100)
 
-#si_knitr_settings()
-options(scipen = 100) #this prevents numbers from showing up in scientific notation
+si_knitr_settings()
 
 ```
 
@@ -58,6 +60,11 @@ hud <- read.csv(path(datapath, "County_HUD_Data_Utah_2011.csv")) %>% clean_names
 
 homelessness <- read.csv(path(datapath, "ut_homelessness.csv")) 
 
+var <- load_variables(2017, "acs1", cache = TRUE) #List variables for ACS 1 year
+
+var5 <- load_variables(2016,"acs5", cache =TRUE)
+
+
 ```
 
 ```{r wic, echo=FALSE, message=FALSE, warning=FALSE}
@@ -77,8 +84,6 @@ wic1 %>%
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-#Create County dataset
 
 pov_county <- poverty %>% 
   mutate(county1 = str_replace_all(county, '[ \t]+$', "")) %>% 
@@ -117,6 +122,7 @@ pov_county %>%
   labs(title = "Average Population Below Poverty Level by County", x = "County", y = "Average Population Below Poverty Level")+
   scale_fill_gradient(low = "red", high = "darkred")
 
+
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -137,10 +143,8 @@ pov_county %>%
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-#Create City dataset
-
 pov_city <- poverty %>% 
- separate(location_1, c("city1","geo"), sep = "\\(", remove = FALSE) %>% 
+  separate(location_1, c("city1","geo"), sep = "\\(", remove = FALSE) %>% 
   separate(city1, c("city","state"), sep="\\,", remove = FALSE ) %>% 
   select(-city1)
 
@@ -169,6 +173,7 @@ pov_city %>%
        x = "City", y = "Poverty rates")+
   scale_fill_gradient(low = "red", high = "darkred")
 
+
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -182,6 +187,7 @@ pov_city %>%
        x = "City", y = "Gini Index")+
   scale_fill_gradient(low = "red", high = "darkred")
 
+
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -194,6 +200,7 @@ pov_city %>%
   labs(title = "Top 10 Cities with lowest Gini index",
        x = "City", y = "Gini Index")+
   scale_fill_gradient(low = "red", high = "darkred")
+
 
 ```
 
@@ -221,120 +228,449 @@ pov_city %>%
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
+hud %>% 
+  filter(program_label == "Summary of All HUD Programs") %>% 
+  filter(name!="No county code", 
+         total_units > quantile(total_units, 0.25, na.rm = T)) %>% 
+  ggplot(aes(x = reorder(name, -total_units), y = total_units, fill = total_units))+
+  geom_bar(stat = "identity")+
+  labs(title = "Total number of units(all HUD) by County",  
+       x = "County", y = "Total Units")+
+  scale_fill_gradient(low = "red", high = "darkred")
+
 
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+hud %>% 
+  filter(program_label == "LIHTC") %>% 
+  filter(name!="No county code", 
+         total_units > quantile(total_units, 0.25, na.rm = T)) %>% 
+  ggplot(aes(x = reorder(name, -total_units), y = total_units, fill = total_units))+
+  geom_bar(stat = "identity")+
+  labs(title = "Total number of units(LIHTC) by County",  
+       x = "County", y = "Total Units")+
+  scale_fill_gradient(low = "red", high = "darkred")
 
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+hud %>% 
+  filter(program_label == "Housing Choice Vouchers") %>% 
+  filter(name!="No county code", 
+         total_units > quantile(total_units, 0.25, na.rm = T)) %>% 
+  ggplot(aes(x = reorder(name, -total_units), y = total_units, fill = total_units))+
+  geom_bar(stat = "identity")+
+  labs(title = "Total number of units(Housing Choice Vouchers) by County",  
+       x = "County", y = "Total Units")+
+  scale_fill_gradient(low = "red", high = "darkred")
 
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+hud %>% 
+  filter(program_label == "Summary of All HUD Programs") %>% 
+  filter(name!="No county code", 
+         pct_occupied > 0) %>% 
+  ggplot(aes(x = reorder(name, -pct_occupied), y = pct_occupied, fill = pct_occupied))+
+  geom_bar(stat = "identity")+
+  labs(title = "Percent Occupied (all HUD) by County",  
+       x = "County", y = "Percent Occupied")+
+  scale_fill_gradient(low = "red", high = "darkred")
 
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+hud %>% 
+  filter(program_label == "Housing Choice Vouchers") %>% 
+  filter(name!="No county code", 
+         pct_occupied > 0) %>% 
+  ggplot(aes(x = reorder(name, -pct_occupied), y = pct_occupied, fill = pct_occupied))+
+  geom_bar(stat = "identity")+
+  labs(title = "Percent Occupied(Housing Choice Vouchers) by County",  
+       x = "County", y = "Percent Occupied")+
+  scale_fill_gradient(low = "red", high = "darkred")
 
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-```
-
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+hud %>% 
+  filter(program_label == "Summary of All HUD Programs",
+         rent_per_month>0,
+         hh_income>0) %>%
+  mutate(rent_as_pct_income = rent_per_month/hh_income) %>% 
+  ggplot(aes(x=reorder(name,-rent_as_pct_income), y = rent_as_pct_income, fill =rent_as_pct_income))+
+  geom_bar(stat = "identity")+
+  labs(title = "Rent as percent of income", x = "County", y="Percentage")+
+  scale_fill_gradient(low = "red", high = "darkred")
 
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+hud %>% 
+  filter(program_label == "Summary of All HUD Programs",
+         name!="No county code",
+         months_waiting>0) %>%
+  ggplot(aes(x=reorder(name,-months_waiting), y = months_waiting, fill =months_waiting))+
+  geom_bar(stat = "identity")+
+  labs(title = "Months waiting (all HUD)", x = "County", y="Months")+
+  scale_fill_gradient(low = "red", high = "darkred")  
 
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
+hud %>% 
+  filter(program_label == "Summary of All HUD Programs",
+         name!="No county code",
+         months_from_movein>0) %>%
+  ggplot(aes(x=reorder(name,-months_from_movein), y = months_from_movein, fill =months_from_movein))+
+  geom_bar(stat = "identity")+
+  labs(title = "Months from move in (all HUD)", x = "County", y="Months")+
+  scale_fill_gradient(low = "red", high = "darkred")
+
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
+hud %>% 
+  filter(program_label == "Summary of All HUD Programs",
+         name!="No county code",
+         pct_minority>0) %>%
+  ggplot(aes(x=reorder(name,-pct_minority), y = pct_minority, fill =pct_minority))+
+  geom_bar(stat = "identity")+
+  labs(title = "Percent minority (all HUD)", x = "County", y="percentage")+
+  scale_fill_gradient(low = "red", high = "darkred")
+
+
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+homelessness %>% 
+  filter(category == "Sheltered Headcount", type == "Total") %>% 
+  select(county, x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>%
+  ggplot(aes(x = years, y = count, color = county))+
+  geom_line(size =1) +
+  labs(title = "Sheltered homeless headcounts over time", 
+       x = "Years", y = "Sheltered Homeless Headcount")
+
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+homelessness %>% 
+  filter(category == "Sheltered Household", type == "Total") %>% 
+  select(county, x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>%
+  ggplot(aes(x = years, y = count, color = county))+
+  geom_line(size =1) +
+  labs(title = "Sheltered homeless households over time", 
+       x = "Years", y = "Sheltered Homeless Households")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+homelessness %>% 
+  filter(category == "Unsheltered Headcount", type == "Total") %>% 
+  select(county, x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>%
+  ggplot(aes(x = years, y = count, color = county))+
+  geom_line(size =1) +
+  labs(title = "Unsheltered homeless headcount over time", 
+       x = "Years", y = "Unsheltered Homeless Headcount")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+homelessness %>% 
+  filter(category == "Unsheltered Household", type == "Total") %>% 
+  select(county, x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>%
+  ggplot(aes(x = years, y = count, color = county))+
+  geom_line(size =1) +
+  labs(title = "Unsheltered homeless households over time", 
+       x = "Years", y = "Unsheltered Homeless Households")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+homelessness %>% 
+  filter(county=="Salt Lake",
+         type=="Total",
+         !str_detect(category,"Total")) %>% 
+  select(category,x2011, x2012, x2013, x2014) %>% 
+  gather("years", "count", 2:5) %>% 
+  mutate(years = case_when(years == "x2011"~"2011",
+                           years == "x2012"~"2012",
+                           years == "x2013"~"2013",
+                           years == "x2014"~"2014"),
+         years = as.numeric(years)) %>% 
+  ggplot(aes(x = years, y = count, color = category))+
+  geom_line(size =1)+
+  labs(title = "Salt Lake County over time", x = "Years", y = "Counts")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+edu_18_to_24 <- education %>% 
+  select(1,2,8,14,20,26) 
+
+edu_18_to_24%>% 
+  separate(geography, c("census_tract", "county"), sep = "\\,", remove = FALSE) %>% 
+  select(county, 4:8) %>% 
+  group_by(county) %>% 
+  summarise_if(is.numeric, sum, na.rm = TRUE) %>% 
+  mutate(pct_less_than_hs = total_estimate_less_than_high_school_graduate/total_estimate_population_18_to_24_years,
+         pct_hs_grad = total_estimate_high_school_graduate_includes_equivalency/total_estimate_population_18_to_24_years,
+         pct_coll_assoc = total_estimate_some_college_or_associate_s_degree/total_estimate_population_18_to_24_years,
+         pct_bach_higher = total_estimate_bachelor_s_degree_or_higher/total_estimate_population_18_to_24_years) %>% 
+  select(county, 7:10) %>% 
+  gather("education_lvl", "pct_estimate", 2:5) %>% 
+  mutate(education_lvl = factor(education_lvl, ordered = TRUE, 
+                                levels = c("pct_less_than_hs","pct_hs_grad","pct_coll_assoc", "pct_bach_higher"))) %>% 
+  ggplot(aes(x = county, y = pct_estimate, fill = education_lvl))+
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percent distribution of education levels", x = "County", y = " Estimate")+
+  scale_y_continuous(labels = percent)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+emp_tot <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(tot = "B23025_001"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) %>% 
+    rename(tot_estimate = estimate,
+           tot_moe = moe) %>% 
+    select(-variable)
+})
+
+unemp<- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(unemp = "B23025_007"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) %>% 
+    rename(unemp_estimate = estimate,
+           unemp_moe = moe) %>% 
+    select(-variable)
+})
+
+emp <- left_join(emp_tot,unemp)
+
+emp %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", ""),
+         pct_unemp = unemp_estimate/tot_estimate) %>% 
+  ggplot(aes(x = year, y = pct_unemp, color = NAME))+
+  geom_line(size= 1)+
+  labs(title = "Unemployment Percentage by County per Year", x = "Year", y = "Percentage")+
+  scale_y_continuous(labels = percent)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+snap_usage <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(tot_SNAP = "C22001_001",
+                        SNAP_recd = "C22001_002",
+                        SNAP_not_recd = "C22001_003",
+                        SNAP_by_pov = "B22003_001",
+                        SNAP_by_pov_BPL = "B22003_003",
+                        SNAP_by_pov_APL = "B22003_004",
+                        noSNAP_by_pov_BPL = "B22003_006",
+                        noSNAP_by_pov_APL = "B22003_007"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) #do we need to use race variables here? 
+})
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "tot_SNAP") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP usage (past 12 months) for households", x ="Year", y = "SNAP Usage") #What is this?
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "SNAP_recd") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP received (past 12 months) for households", x ="Year", y = "SNAP Usage")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "SNAP_not_recd") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP not received (past 12 months) for households", x ="Year", y = "SNAP Usage")
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "SNAP_by_pov_BPL") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP received (past 12 months) for households below poverty line", x ="Year", y = "SNAP Usage")
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "noSNAP_by_pov_BPL") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP not received (past 12 months) for households below poverty line", x ="Year", y = "SNAP Usage")  
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+median_income <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(hhincome = "B19013_001"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) 
+})
+
+median_income %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  ggplot(aes(x = year, y= estimate, color = NAME))+
+  geom_line(size =1)+
+  labs(title = "Median Household income", x = "Year", y = "Income")+
+  scale_y_continuous(labels = dollar)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+family_income <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(famincome = "B19101_001"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) 
+})
+
+family_income %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  ggplot(aes(x = year, y= estimate, color = NAME))+
+  geom_line(size =1)+
+  labs(title = "Family income", x = "Year", y = "Income")+
+  scale_y_continuous(labels = dollar)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+family_income_5 <- get_acs(geography = "county",
+                           variables = c(famincome = "B19101_001"),
+                           state = "UT",
+                           survey = "acs5",
+                           geometry = TRUE)
+
+
+family_income_5 %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  ggplot(aes(x = reorder(NAME, -estimate),y = estimate)) + 
+  geom_errorbar(aes(ymin = estimate - moe, ymax = estimate + moe)) + 
+  geom_point(size = 3, color = "red")+
+  labs(title = "Family Income per County", x = "County",  y ="Family Income")+
+  scale_y_continuous(labels = dollar)
+
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+family_income_5 %>% 
+  ggplot(aes(fill = estimate, color = estimate))+
+  geom_sf()+
+  scale_fill_viridis_c() +  
+  scale_color_viridis_c()+
+  labs(title = "Family income across cities in UT")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+family_income_tracts <- get_acs(geography = "tract",
+                                variables = c(famincome = "B19101_001"),
+                                state = "UT",
+                                survey = "acs5",
+                                geometry = TRUE)
+
+
+
+
+family_income_tracts %>% 
+  ggplot(aes(fill = estimate, color = estimate))+
+  geom_sf()+
+  scale_fill_viridis_c() +  
+  scale_color_viridis_c()+
+  labs(title = "Family income across census tracts in UT")
 
 ```
 
