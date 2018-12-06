@@ -15,6 +15,7 @@ knitr::opts_chunk$set(warning = FALSE)
 library(siverse)
 library(tidyverse)
 library(tidycensus)
+library(tigris)
 library(scales)
 
 theme_set(theme_minimal())
@@ -366,27 +367,35 @@ homelessness %>%
 
 ```{r education, eval=FALSE, include=FALSE}
 
+#total_estimate_percent_imputed_educational_attainment" ? what does this mean???
+
+edu_18_to_24 <- education %>% 
+  select(1,2,8,14,20,26) 
+
+edu_18_to_24%>% 
+  separate(geography, c("census_tract", "county"), sep = "\\,", remove = FALSE) %>% 
+  select(county, 4:8) %>% 
+  group_by(county) %>% 
+  summarise_if(is.numeric, sum, na.rm = TRUE) %>% 
+  mutate(pct_less_than_hs = total_estimate_less_than_high_school_graduate/total_estimate_population_18_to_24_years,
+         pct_hs_grad = total_estimate_high_school_graduate_includes_equivalency/total_estimate_population_18_to_24_years,
+         pct_coll_assoc = total_estimate_some_college_or_associate_s_degree/total_estimate_population_18_to_24_years,
+         pct_bach_higher = total_estimate_bachelor_s_degree_or_higher/total_estimate_population_18_to_24_years) %>% 
+  select(county, 7:10) %>% 
+  gather("education_lvl", "pct_estimate", 2:5) %>% 
+  mutate(education_lvl = factor(education_lvl, ordered = TRUE, 
+                               levels = c("pct_less_than_hs","pct_hs_grad","pct_coll_assoc", "pct_bach_higher"))) %>% 
+  ggplot(aes(x = county, y = pct_estimate, fill = education_lvl))+
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percent distribution of education levels", x = "County", y = " Estimate")+
+  scale_y_continuous(labels = percent)
+  
+  
 
   
 
 ```
 
-
-
-```{r ACS poverty, eval=FALSE, include=FALSE}
-
-pverty2 <- get_acs(geography = "county"
-                   variables = "S2201_C01_001E",
-                   survey = "acs5",
-                   state = "UT")
-
-pverty2.2 <- get_acs(geography = "county",
-                   variables = "S2201_C02_001E",
-                   survey = "acs5",
-                   state = "UT")
-
-
-```
 
 
 ```{r ACS unemployment, echo=FALSE, message=FALSE, warning=FALSE}
@@ -524,7 +533,8 @@ family_income %>%
 family_income_5 <- get_acs(geography = "county",
           variables = c(famincome = "B19101_001"),
           state = "UT",
-          survey = "acs5")
+          survey = "acs5",
+          geometry = TRUE)
 
 
 family_income_5 %>% 
@@ -535,10 +545,28 @@ family_income_5 %>%
   labs(title = "Family Income per County", x = "County",  y ="Family Income")+
   scale_y_continuous(labels = dollar)
 
+family_income_tracts <- get_acs(geography = "tract",
+          variables = c(famincome = "B19101_001"),
+          state = "UT",
+          survey = "acs5",
+          geometry = TRUE)
+
+family_income_5 %>% 
+  ggplot(aes(fill = estimate, color = estimate))+
+  geom_sf()+
+  scale_fill_viridis_c() +  
+  scale_color_viridis_c()+
+  labs(title = "Family income across cities in UT")
+
+
+family_income_tracts %>% 
+  ggplot(aes(fill = estimate, color = estimate))+
+  geom_sf()+
+  scale_fill_viridis_c() +  
+  scale_color_viridis_c()+
+  labs(title = "Family income across census tracts in UT")
+
+
 ```
 
-
-```{r}
-
-```
 
