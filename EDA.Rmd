@@ -15,9 +15,13 @@ knitr::opts_chunk$set(warning = FALSE)
 library(siverse)
 library(tidyverse)
 library(tidycensus)
+library(scales)
 
 theme_set(theme_minimal())
 theme_update(text = element_text(family = "Roboto"), axis.text = element_text(family = "Roboto"), strip.text = element_text(family = "Roboto"), axis.text.x = element_text(angle = 45, hjust = 1))
+options(scipen = 100)
+
+
 
 ```
 
@@ -34,6 +38,11 @@ education <- read.csv(path(datapath, "Utah_Educational_Level_By_Census_Tract_201
 hud <- read.csv(path(datapath, "County_HUD_Data_Utah_2011.csv")) %>% clean_names()
 
 homelessness <- read.csv(path(datapath, "ut_homelessness.csv")) 
+
+var <- load_variables(2017, "acs1", cache = TRUE) #List variables for ACS 1 year
+
+var5 <- load_variables(2016,"acs5", cache =TRUE)
+
 
 
 
@@ -175,21 +184,6 @@ pov_city %>%
 ```
 
 
-
-```{r ACS poverty, eval=FALSE, include=FALSE}
-
-pverty2 <- get_acs(geography = "county"
-                   variables = "S2201_C01_001E",
-                   survey = "acs5",
-                   state = "UT")
-
-pverty2.2 <- get_acs(geography = "county",
-                   variables = "S2201_C02_001E",
-                   survey = "acs5",
-                   state = "UT")
-
-
-```
 
 
 
@@ -372,22 +366,179 @@ homelessness %>%
 
 ```{r education, eval=FALSE, include=FALSE}
 
-edu <- education %>% 
-  separate(geography,c("census_tract","county"),sep = "\\,", remove = FALSE)
 
-edu %>% 
-  mutate(less_than_hs_18_to_24 = total_estimate_less_than_high_school_graduate/total_estimate_population_18_to_24_years,
-         hs_18_to_24 = total_estimate_high_school_graduate_includes_equivalency/total_estimate_population_18_to_24_years,
-         college_18_to_24 = total_estimate_some_college_or_associate_s_degree/total_estimate_population_18_to_24_years,
-         bachelors_higher_18_to_24 = total_estimate_bachelor_s_degree_or_higher/total_estimate_population_18_to_24_years) %>% 
-  group_by(county) %>% 
-  select(county, less_than_hs_18_to_24, hs_18_to_24, college_18_to_24, bachelors_higher_18_to_24) %>% 
-  print()
- 
-edu %>% 
-  select(county, total_estimate_population_18_to_24_years,total_estimate_less_than_high_school_graduate,total_estimate_high_school_graduate_includes_equivalency,total_estimate_some_college_or_associate_s_degree,total_estimate_bachelor_s_degree_or_higher) %>% 
-  head()
   
+
+```
+
+
+
+```{r ACS poverty, eval=FALSE, include=FALSE}
+
+pverty2 <- get_acs(geography = "county"
+                   variables = "S2201_C01_001E",
+                   survey = "acs5",
+                   state = "UT")
+
+pverty2.2 <- get_acs(geography = "county",
+                   variables = "S2201_C02_001E",
+                   survey = "acs5",
+                   state = "UT")
+
+
+```
+
+
+```{r ACS unemployment, echo=FALSE, message=FALSE, warning=FALSE}
+
+emp_tot <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(tot = "B23025_001"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) %>% 
+    rename(tot_estimate = estimate,
+           tot_moe = moe) %>% 
+    select(-variable)
+})
+
+unemp<- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(unemp = "B23025_007"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) %>% 
+    rename(unemp_estimate = estimate,
+           unemp_moe = moe) %>% 
+    select(-variable)
+})
+
+emp <- left_join(emp_tot,unemp)
+
+emp %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", ""),
+         pct_unemp = unemp_estimate/tot_estimate) %>% 
+  ggplot(aes(x = year, y = pct_unemp, color = NAME))+
+  geom_line(size= 1)+
+  labs(title = "Unemployment Percentage by County per Year", x = "Year", y = "Percentage")+
+  scale_y_continuous(labels = percent)
+                        
+```
+
+
+
+```{r SNAP}
+
+snap_usage <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(tot_SNAP = "C22001_001",
+                        SNAP_recd = "C22001_002",
+                        SNAP_not_recd = "C22001_003",
+                        SNAP_by_pov = "B22003_001",
+                        SNAP_by_pov_BPL = "B22003_003",
+                        SNAP_by_pov_APL = "B22003_004",
+                        noSNAP_by_pov_BPL = "B22003_006",
+                        noSNAP_by_pov_APL = "B22003_007"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) #do we need to use race variables here? 
+})
+
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "tot_SNAP") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP usage (past 12 months) for households", x ="Year", y = "SNAP Usage") #What is this?
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "SNAP_recd") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP received (past 12 months) for households", x ="Year", y = "SNAP Usage")
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "SNAP_not_recd") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP not received (past 12 months) for households", x ="Year", y = "SNAP Usage")
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "SNAP_by_pov_BPL") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP received (past 12 months) for households below poverty line", x ="Year", y = "SNAP Usage")
+
+snap_usage %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  filter(variable == "noSNAP_by_pov_BPL") %>% 
+  ggplot(aes(x = year, y = estimate, color = NAME))+
+  geom_line(size = 1)+
+  labs(title = "SNAP not received (past 12 months) for households below poverty line", x ="Year", y = "SNAP Usage")  
+  
+```
+
+
+```{r Median Income}
+
+median_income <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(hhincome = "B19013_001"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) 
+})
+
+median_income %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  ggplot(aes(x = year, y= estimate, color = NAME))+
+  geom_line(size =1)+
+  labs(title = "Median Household income", x = "Year", y = "Income")+
+  scale_y_continuous(labels = dollar)
+
+
+family_income <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(famincome = "B19101_001"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) 
+})
+
+family_income %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  ggplot(aes(x = year, y= estimate, color = NAME))+
+  geom_line(size =1)+
+  labs(title = "Family income", x = "Year", y = "Income")+
+  scale_y_continuous(labels = dollar)
+
+family_income_5 <- get_acs(geography = "county",
+          variables = c(famincome = "B19101_001"),
+          state = "UT",
+          survey = "acs5")
+
+
+family_income_5 %>% 
+  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
+  ggplot(aes(x = reorder(NAME, -estimate),y = estimate)) + 
+  geom_errorbar(aes(ymin = estimate - moe, ymax = estimate + moe)) + 
+  geom_point(size = 3, color = "red")+
+  labs(title = "Family Income per County", x = "County",  y ="Family Income")+
+  scale_y_continuous(labels = dollar)
+
+```
+
+
+```{r}
 
 ```
 
