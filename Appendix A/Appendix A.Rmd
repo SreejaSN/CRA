@@ -48,6 +48,25 @@ si_knitr_settings()
 
 ##### Pagebreak
 
+
+## Introduction
+
+This appendix analyzed a few publicly available data sets related to the well being of residents in the study area. 
+
+#### Data Source and Methods
+
+Data sources used here include opendata.gov, the American Community Survey (ACS) Data and the U.S. Census. Both ACS 5-year data and annual data were included for the appropriate visualizations. For annual ACS data, the starting year was set to 2012 because of the limitation of the API pull. ACS annual data is limited to counties with populations greater than 65,000. Consequently, Summit County did not get included in this data set.
+
+For the purposes of clarity of plots and graphs, only Davis, Salt Lake, Summit, Tooele, Utah and Weber Counties were included in this report as these were identified as the primary areas of interest. 
+
+#### Results
+
+
+
+
+##### Pagebreak
+
+
 ```{r data, message=FALSE, warning=FALSE, include=FALSE}
 
 datapath <- path_expand("G:/My Drive/SI/Current Projects/CRA Needs Assessment/WS 2_Analysis of Publicly Available Data/Data/")
@@ -125,8 +144,13 @@ unemp<- map_df(2012:2017, function(x){
 
 emp <- left_join(emp_tot,unemp)
 
+getPalette = colorRampPalette(brewer.pal(9, "Reds"))
 ```
 
+## Education 
+
+The following couple of plots show the distribution of education among the 18-24 year olds and those above 25 years of age. 
+In the 18-25 year old age group, Tooele county has the highest percentage of people with less than high school education and the lowest percentage of those with a bachelor's degree or higher. Tooele county and Weber county have the highest percentage of less than high school graduate among those over 25 years of age. 
 
 
 
@@ -150,9 +174,9 @@ edu_18_to_24%>%
                                            "total_estimate_high_school_graduate_includes_equivalency",
                                            "total_estimate_some_college_or_associate_s_degree",
                                            "total_estimate_bachelor_s_degree_or_higher"))) %>% 
-  ggplot(aes(x = county, y = pct_estimate, fill = education_lvl))+
+  ggplot(aes(x = county, y = (pct_estimate/100), fill = education_lvl))+
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Percent Distribution of Education (among 18-24 year-olds) by County", x = "County", y = " Percent")+
+  labs(title = "Distribution of Education by County", subtitle = "Among 18-24 year-olds", x = "County", y = " Percent")+
   scale_fill_brewer(name ="", 
                     palette = "YlOrRd",
                     breaks = c("total_estimate_less_than_high_school_graduate",
@@ -162,7 +186,8 @@ edu_18_to_24%>%
                       labels = c("Less Than High School",
                                  "High School Graduate",
                                  "Some College or Associate's Degree",
-                                 "Bachelor's Degree of Higher"))
+                                 "Bachelor's Degree or Higher"))+
+  scale_y_continuous(labels = percent)
 
 ```
 
@@ -192,9 +217,9 @@ edu_above_25 %>%
                                            "total_estimate_some_college_or_associate_s_degree",
                                            "total_estimate_population_25_years_and_over_bachelor_s_degree",
                                            "total_estimate_population_25_years_and_over_graduate_or_professional_degree"))) %>% 
-  ggplot(aes(x = county, y = pct_estimate, fill = education_lvl))+
+  ggplot(aes(x = county, y = (pct_estimate/100), fill = education_lvl))+
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Percent Distribution of Education (ages above 25) by County", x = "County", y = "Percent")+
+  labs(title = "Distribution of Education by County", subtitle = "25 years and over",x = "County", y = "Percent")+
   scale_fill_brewer(name ="", 
                     palette = "YlOrRd",
                     breaks = c("total_estimate_less_than_high_school_graduate",
@@ -205,16 +230,22 @@ edu_above_25 %>%
                       labels = c("Less Than High School",
                                  "High School Graduate",
                                  "Some College or Associate's Degree",
-                                 "Bachelor's Degree of Higher",
-                                 "Graduate of Professional Degree"))
+                                 "Bachelor's Degree or Higher",
+                                 "Graduate of Professional Degree"))+
+  scale_y_continuous(labels = percent)
   
 
 ```
 
 
-```{r unemployment, echo=FALSE, message=FALSE, warning=FALSE}
+## Unemployment
 
+in 2017, Weber County had the highest unemployment percentage among the civilian labor force. 
+
+```{r unemp pct, echo=FALSE, message=FALSE, warning=FALSE}
+ 
 emp %>% 
+  filter(year == "2017") %>% 
   filter(GEOID == "49011"|
            GEOID == "49035"|
            GEOID=="49043"|
@@ -223,19 +254,38 @@ emp %>%
            GEOID=="49057") %>%
   mutate(NAME = str_replace(NAME, ", Utah", ""),
          pct_unemp = unemp_estimate/tot_estimate) %>% 
+  ggplot(aes(x = reorder(NAME, -pct_unemp), y = pct_unemp, fill = NAME))+
+  geom_bar(stat= "identity")+
+  labs(title = "Unemployment Percentage in the Civilian Labor Force", x = "Year", y = "Percentage")+
+  scale_y_continuous(labels = percent)+
+  scale_fill_brewer(palette = "Set1", guide = FALSE)
+
+
+```
+
+But when looking at the yearly trends, Weber and Salt Lake Counties have seen a decrease in the unemployment rate, while Davis and Utah Counties have seen an increase in unemployment percentage over the last 6  years. Tooele County was excluded from due to lack of annual data. 
+
+```{r unemployment, echo=FALSE, message=FALSE, warning=FALSE}
+
+emp %>% 
+  filter(GEOID == "49011"|
+           GEOID == "49035"|
+           GEOID=="49043"|
+           GEOID=="49049"|
+           GEOID=="49057") %>%
+  mutate(NAME = str_replace(NAME, ", Utah", ""),
+         pct_unemp = unemp_estimate/tot_estimate) %>% 
   ggplot(aes(x = year, y = pct_unemp, color = NAME))+
   geom_line(size= 1)+
-  labs(title = "Unemployment Percentage in the Civilian Labor Force by County per Year", x = "Year", y = "Percentage")+
-  scale_y_continuous(labels = percent)
+  labs(title = "Unemployment Percentage in the Civilian Labor Force", subtitle = "By county over time", x = "Year", y = "Percentage", color = "")+
+  scale_y_continuous(labels = percent)+
+  scale_color_brewer(palette = "Set1")
+  
 
 ```
 
 
-
-
-
-
-
+The median household income has increased over time in all the counties of interest with Summit County having the highest median income and Weber County with the lowest median income. 
 
 ```{r Med hh income, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -249,23 +299,28 @@ acs_pov %>%
            county_id=="49057") %>% 
   ggplot(aes(x = year, y = med_hh_inc, color = county))+
   geom_line(size = 1)+
-  labs(title = "Median Household Income Over Time", x = "Year", y = "Median Income", color = "")
+  labs(title = "Median Household Income Over Time", x = "Year", y = "Median Income", color = "")+
+  scale_color_brewer(palette = "Set1")+
+  scale_y_continuous(labels = comma)
+  
 
 ```
 
+This map shows that Summit County has the highest median household income in Utah and the lowest being Piute County. 
 
 ```{r med inc map,echo=FALSE, message=FALSE, warning=FALSE}
 
 map %>% 
-  ggplot(aes(fill = med_hh_inc, color = med_hh_inc))+
+  ggplot(aes(fill = med_hh_inc))+
   geom_sf()+
-  scale_fill_viridis_c() +  
-  scale_color_viridis_c()+
+  scale_fill_viridis_c("Median Household Income") +  
   labs(title = "Median Income Across Counties")
+  
 
 ```
 
 
+This lot shows that Tooele has the lowest Gini Index.  
 
 ```{r avg gini index county, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -278,7 +333,7 @@ pov_county %>%
          county1 == "Utah"|
          county1 == "Weber") %>%
   summarize(avg_gini_index = mean(gini_index, na.rm = TRUE)) %>% 
-  ggplot(aes(x = reorder(county1, -avg_gini_index), y = avg_gini_index, fill = factor(avg_gini_index)))+
+  ggplot(aes(x = reorder(county1, avg_gini_index), y = avg_gini_index, fill = factor(avg_gini_index)))+
   geom_bar(stat = "identity")+
   labs(title = "Average Gini Index by County", x = "County", y = "Average Gini Index")+ 
   scale_fill_brewer(palette = "Reds", guide = FALSE)
@@ -286,12 +341,41 @@ pov_county %>%
 ```
 
 
+Tooele also has the lowest Gini Index to median Household income ratio, which is indicative of a fairly equal distribution of low income.
+
+```{r gini by county inc,echo=FALSE, message=FALSE, warning=FALSE}
+
+pov_county %>%  
+  group_by(county1) %>%
+  filter(county1 == "Davis"|
+           county1 == "Salt Lake"| 
+         county1 == "Summit"|
+         county1=="Tooele"|
+         county1 == "Utah"|
+         county1 == "Weber") %>%
+  summarize(avg_gini_index = round(mean(gini_index, na.rm = TRUE),2),
+            mean_hh_inc = mean(median_household_income, na.rm = TRUE)) %>% 
+  ggplot(aes(x = avg_gini_index, y = mean_hh_inc, color = county1))+
+  geom_point(size = 3)+
+  geom_text(aes(label = county1, vjust = 1.5, hjust = 0.7), size = 2.5)+
+  labs(x = "Gini Index", y = "Median Household Income", title = "Median Household Income by Gini Index")+
+  scale_color_brewer(palette = "Dark2", guide = FALSE)+
+  scale_y_continuous(labels = dollar)
+  
+```
+
+
+When looking at cities and their Gini Index, Alta has the highest Gini Index and Ophir (in Utah county) has the lowest Gini Index. 
 
 ```{r highest Gini cities, echo=FALSE, message=FALSE, warning=FALSE}
 
-getPalette = colorRampPalette(brewer.pal(9, "Reds"))
-
 pov_city %>% 
+  filter(county == "Davis"|
+           county == "Salt Lake"| 
+         county == "Summit"|
+         county=="Tooele"|
+         county == "Utah"|
+         county == "Weber") %>% 
   arrange(desc(gini_index)) %>% 
   slice(1:10) %>% 
   ggplot(aes(x = reorder(city, -gini_index), y = gini_index, fill = factor(gini_index)))+
@@ -308,6 +392,12 @@ pov_city %>%
 ```{r lowest Gini cities, echo=FALSE, message=FALSE, warning=FALSE}
 
 pov_city %>% 
+  filter(county == "Davis"|
+           county == "Salt Lake"| 
+         county == "Summit"|
+         county=="Tooele"|
+         county == "Utah"|
+         county == "Weber") %>%
   arrange((gini_index)) %>% 
   slice(1:10) %>% 
   ggplot(aes(x = reorder(city, gini_index), y = gini_index, fill = factor(gini_index)))+
@@ -319,30 +409,31 @@ pov_city %>%
 
 ```
 
+Ophir also has a high median income and a low Gini Index indicating an equal distribution of high income in the community, while cities Riverside has a low Gini Index and a low median income, indicative of a poorer city.
 
+```{r hh inc by gini, echo=FALSE, message=FALSE, warning=FALSE}
 
-
-```{r pop below poverty level county, echo=FALSE, message=FALSE, warning=FALSE}
-
-pov_county %>%  
-  group_by(county1) %>% 
-  filter(county1 == "Davis"|
-           county1 == "Salt Lake"| 
-         county1 == "Summit"|
-         county1=="Tooele"|
-         county1 == "Utah"|
-         county1 == "Weber") %>%
-  summarize(avg_below_poverty_level = mean(below_poverty_level, na.rm = TRUE)) %>% 
-  ggplot(aes(x = reorder(county1, -avg_below_poverty_level), y = avg_below_poverty_level, fill = factor(avg_below_poverty_level)))+
-  geom_bar(stat = "identity")+
-  labs(title = "Average Population Below Poverty Level by County", x = "County", y = "Average Population Below Poverty Level")+ 
-  scale_fill_brewer(palette = "Reds", guide = FALSE)+
-  scale_y_continuous(labels = comma)
+pov_city %>% 
+  filter(county == "Davis"|
+           county == "Salt Lake"| 
+         county == "Summit"|
+         county=="Tooele"|
+         county == "Utah"|
+         county == "Weber") %>%
+  arrange((gini_index)) %>% 
+  slice(1:10) %>% 
+  ggplot(aes(x = gini_index, y = median_household_income, color = city))+
+  geom_point(size = 3)+
+  geom_text(aes(label = city,  vjust = 1.5, hjust = 0.7), size = 2.5)+
+  labs(x = "Gini Index", y = "Median Household Income", title = "Median Household Income by Gini Index")+
+  scale_y_continuous(labels = dollar)+
+  guides(color=FALSE)
 
 
 ```
 
 
+While Salt Lake County does not have the highest poverty rate among the counties of interest, it does have the highest population below poverty level which poses a significant burden on the county. 
 
 ```{r avg poverty rate county, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -366,9 +457,39 @@ pov_county %>%
 
 ```
 
+
+
+```{r pop below poverty level county, echo=FALSE, message=FALSE, warning=FALSE}
+
+pov_county %>%  
+  group_by(county1) %>% 
+  filter(county1 == "Davis"|
+           county1 == "Salt Lake"| 
+         county1 == "Summit"|
+         county1=="Tooele"|
+         county1 == "Utah"|
+         county1 == "Weber") %>%
+  summarize(avg_below_poverty_level = mean(below_poverty_level, na.rm = TRUE)) %>% 
+  ggplot(aes(x = reorder(county1, -avg_below_poverty_level), y = avg_below_poverty_level, fill = factor(avg_below_poverty_level)))+
+  geom_bar(stat = "identity")+
+  labs(title = "Average Population Below Poverty Level by County", x = "County", y = "Average Population Below Poverty Level")+ 
+  scale_fill_brewer(palette = "Reds", guide = FALSE)+
+  scale_y_continuous(labels = comma)
+
+```
+
+
+7 out of 10 cities with the highest populations below poverty level belong to Salt Lake County. 
+
 ```{r pop below poverty level city, echo=FALSE, message=FALSE, warning=FALSE}
 
 pov_city %>% 
+  filter(county == "Davis"|
+           county == "Salt Lake"| 
+         county == "Summit"|
+         county=="Tooele"|
+         county == "Utah"|
+         county == "Weber") %>%
   arrange(desc(below_poverty_level)) %>% 
   slice(1:10) %>% 
   ggplot(aes(x = reorder(city, -below_poverty_level), y = below_poverty_level, fill = factor(below_poverty_level)))+
@@ -383,10 +504,15 @@ pov_city %>%
 
 
 
-
 ```{r highest poverty rate, echo=FALSE, message=FALSE, warning=FALSE}
 
 pov_city %>% 
+  filter(county == "Davis"|
+           county == "Salt Lake"| 
+         county == "Summit"|
+         county=="Tooele"|
+         county == "Utah"|
+         county == "Weber") %>%
   mutate(total_pop = below_poverty_level+ at_or_above_poverty_level,
          poverty_rate = below_poverty_level/total_pop) %>% 
   arrange(desc(poverty_rate)) %>% 
@@ -401,11 +527,17 @@ pov_city %>%
 ```
 
 
-
+The rates of poverty between men and women are very comparable for the top 10 cities with the highest poverty rates, with the exception of Alta and Samak. 
 
 ```{r poverty by sex,  echo=FALSE, message=FALSE, warning=FALSE}
 
 pov_city %>% 
+  filter(county == "Davis"|
+           county == "Salt Lake"| 
+         county == "Summit"|
+         county=="Tooele"|
+         county == "Utah"|
+         county == "Weber") %>%
   mutate(total_pop = below_poverty_level+ at_or_above_poverty_level,
          poverty_rate = below_poverty_level/total_pop,
          total_below_poverty_males = (below_poverty_level_male+at_or_above_poverty_level_male)/total_pop,
@@ -418,7 +550,8 @@ pov_city %>%
   gather("sex","poverty_rates",2:3) %>% 
   ggplot(aes(x = city, y = poverty_rates, fill = sex))+
   geom_bar(stat = "identity", position = "dodge")+
-  labs(title = "Poverty Rates by Sex for the Top 10 Cities with the Highest Poverty Rates",
+  labs(title = "Poverty Rates by Sex ",
+subtitle ="For top 10 cities with the highest poverty rates",
        x = "City", y = "Poverty Rate")+
   scale_fill_manual(values = c("#CF3721","#31a9b8"),
                     name = "Sex", 
@@ -427,6 +560,7 @@ pov_city %>%
 ```
 
 
+The poverty rates have decreased over time for all counties of interest which is hopeful. 
 
 ```{r poverty over time,echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -445,21 +579,21 @@ acs_pov %>%
 ```
 
 
-
-
-
+The highest poverty rate in Utah is in San Juan county. 
 
 ```{r poverty rate map,echo=FALSE, message=FALSE, warning=FALSE}
 
 map %>% 
-  ggplot(aes(fill = all_ages_in_poverty_percent, color = all_ages_in_poverty_percent))+
+  ggplot(aes(fill = all_ages_in_poverty_percent))+
   geom_sf()+
-  scale_fill_viridis_c() +  
-  scale_color_viridis_c()+
-  labs(title = "Poverty Rates Across Counties")
+  scale_fill_viridis_c("Poverty Rate") +  
+  labs(title = "Poverty Rate Across Counties")
+  
 
 ```
 
+
+Central Utah Public Health has the most WIC Clinics in Utah , and Davis, Wasatch and Weber/Morgan Counties with the least number of WIC Clinics
 
 ```{r wic, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -476,8 +610,11 @@ wic1 %>%
   scale_fill_gradient(low = "red", high = "darkred", guide = FALSE)+
   coord_flip()
 
+
 ```
 
+
+Salt Lake County has the most number of units under HUD programs. Tooele County has the least. 
 
 ```{r hud total units, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -486,6 +623,7 @@ hud %>%
          total_units > quantile(total_units, 0.25, na.rm = T)) %>% 
   filter(name == "Davis County"|
            name == "Salt Lake County"|
+           name == "Summit County"|
            name == "Tooele County"|
            name == "Utah County"|
            name == "Weber County") %>% 
@@ -501,7 +639,7 @@ hud %>%
 ```
 
 
-
+This plot shows the burden on HUD. Most programs show close to 100% occupancy. 
 
 ```{r hud pct occupied, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -510,6 +648,7 @@ hud %>%
          pct_occupied > 0) %>% 
   filter(name == "Davis County"|
            name == "Salt Lake County"|
+           name == "Summit County"|
            name == "Tooele County"|
            name == "Utah County"|
            name == "Weber County") %>% 
@@ -523,34 +662,15 @@ hud %>%
 ```
 
 
-```{r hud rent pct, echo=FALSE, message=FALSE, warning=FALSE}
 
-hud %>% 
-  filter(rent_per_month>0,
-         hh_income>0) %>%
-  filter(name == "Davis County"|
-           name == "Salt Lake County"|
-           name == "Tooele County"|
-           name == "Utah County"|
-           name == "Weber County") %>% 
-  mutate(rent_as_pct_income = rent_per_month/hh_income) %>% 
-  ggplot(aes(x=reorder(name,-rent_as_pct_income), y = rent_as_pct_income, fill =rent_as_pct_income))+
-  geom_bar(stat = "identity")+
-  labs(title = "Rent as Percent of Income by County and Program", x = "County", y="Percentage")+
-  facet_wrap(vars(program_label), scales = "free_y")+
-  scale_fill_gradient(high = "#a50f15", low = "#fcbba1", guide = FALSE)+
-  scale_y_continuous(labels = percent)
-
-```
-
-
+Most counties (except Summit) have a pretty long wait time, especially when it comes to Housing Choice Vouchers. 
 
 ```{r hud months waiting, echo=FALSE, message=FALSE, warning=FALSE}
 
 hud %>% 
-  filter(months_waiting>0) %>%
   filter(name == "Davis County"|
            name == "Salt Lake County"|
+           name == "Summit County"|
            name == "Tooele County"|
            name == "Utah County"|
            name == "Weber County") %>% 
@@ -563,12 +683,14 @@ hud %>%
 
 
 
+Summit County has the highest months from move in time, close to 15 months for housing choice vouchers.
+
 ```{r months from move in, echo=FALSE, message=FALSE, warning=FALSE}
 
 hud %>% 
-  filter(months_from_movein>0) %>%
   filter(name == "Davis County"|
            name == "Salt Lake County"|
+           name == "Summit County"|
            name == "Tooele County"|
            name == "Utah County"|
            name == "Weber County") %>%
@@ -581,6 +703,8 @@ hud %>%
 ```
 
 
+
+These plots show that Salt Lake City has the highest number of homeless headcounts by a very big margin. 
 
 ```{r homeless headcounts,echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -598,7 +722,7 @@ homelessness %>%
   ggplot(aes(x = years, y = count, color = county))+
   geom_line(size = 1.1)+
   facet_wrap(vars(category), scales = "free_y")+
-  labs(title = " Homeless Headcounts over Time", x = "Years", y = "Headcount", color = "County")
+  labs(title = " Homeless Headcounts over Time", x = "Years", y = "Headcount", color = "")
 
 ```
 
