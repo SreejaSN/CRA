@@ -54,24 +54,33 @@ datapath <- path_expand("G:/My Drive/SI/Current Projects/CRA Needs Assessment/WS
 
 wic <- read.csv("G:/My Drive/SI/Current Projects/CRA Needs Assessment/WS 2_Analysis of Publicly Available Data/Data/WIC_Clinics_in_Utah.csv") %>% clean_names()
 
-poverty <- read.csv(path(datapath,"Poverty_data_by_Age__City_and_County_Utah_2013.csv")) %>% clean_names()
-
 education <- read.csv(path(datapath, "Utah_Educational_Level_By_Census_Tract_2013.csv")) %>% clean_names()
-
-hud <- read.csv(path(datapath, "County_HUD_Data_Utah_2011.csv")) %>% clean_names()
-
-homelessness <- read.csv(path(datapath, "ut_homelessness.csv")) 
-
-var <- load_variables(2017, "acs1", cache = TRUE) #List variables for ACS 1 year
-
-var5 <- load_variables(2016,"acs5", cache =TRUE)
-
 
 edu_above_25 <- education %>% 
   select(1, 38,44,50,56,62,68,74)
 
 edu_18_to_24 <- education %>% 
   select(1,8,14,20,26) 
+
+hud <- read.csv(path(datapath, "County_HUD_Data_Utah_2011.csv")) %>% clean_names()
+
+homelessness <- read.csv(path(datapath, "ut_homelessness.csv")) 
+
+acs_pov <- read.csv(path(datapath, "SAIPESNC_11DEC18_05_20_11_35.csv"), stringsAsFactors = FALSE) %>% clean_names() %>% separate(median_household_income_in_dollars, c("d", "med_hh_inc"), sep = "\\$", remove = FALSE) 
+
+acs_pov$med_hh_inc <- as.numeric(str_replace(acs_pov$med_hh_inc, ",", ""))
+
+ut <- counties(state = "UT", class = "sf")
+
+map_pov <- acs_pov %>% 
+  filter(year == "2017") %>% 
+  filter(county_id!="0", county_id!="49000") %>% 
+  rename(GEOID = county_id) %>% 
+  mutate(GEOID = as.character(GEOID))
+
+map <- left_join(map_pov,ut)
+
+poverty <- read.csv(path(datapath,"Poverty_data_by_Age__City_and_County_Utah_2013.csv")) %>% clean_names()
 
 pov_county <- poverty %>% 
   mutate(county1 = str_replace_all(county, '[ \t]+$', "")) %>% 
@@ -88,6 +97,33 @@ hud <- hud %>%
                                  levels = c("Summary of All HUD Programs", "Housing Choice Vouchers",
                                             "LIHTC","Mod Rehab", "Multi-Family Other","Public Housing",
                                             "Section 236","Section 8 NC/SR")))
+
+emp_tot <- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(tot_civilian = "B23025_003"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) %>% 
+    rename(tot_estimate = estimate,
+           tot_moe = moe) %>% 
+    select(-variable)
+})
+
+unemp<- map_df(2012:2017, function(x){
+  get_acs(geography = "county",
+          variables = c(unemp = "B23025_007"),
+          state = "UT",
+          survey = "acs1",
+          year = x) %>% 
+    mutate(year = x) %>% 
+    rename(unemp_estimate = estimate,
+           unemp_moe = moe) %>% 
+    select(-variable)
+})
+
+
+emp <- left_join(emp_tot,unemp)
 
 ```
 
@@ -176,45 +212,56 @@ edu_above_25 %>%
 ```
 
 
+```{r unemployment, echo=FALSE, message=FALSE, warning=FALSE}
 
-
-
-```{r wic, echo=FALSE, message=FALSE, warning=FALSE}
-
-wic1 <- wic %>% separate(location_1, c("address","city1","geo"), sep = "\\n", remove = FALSE) %>% 
-  separate(city1, c("city","state"), sep="\\,", remove = FALSE )
-
-wic1 %>% 
-  group_by(health_department) %>% 
-  count() %>% 
-  ggplot(aes(x = reorder(health_department,n), y= n , fill = n)) +
-  geom_bar(stat = "identity")+
-  labs(title = " Distribution of WIC Clinics in Utah",
-       x = "WIC Clinic Locations", y = "Count")+
-  scale_fill_gradient(low = "red", high = "darkred", guide = FALSE)+
-  coord_flip()
+emp %>% 
+  filter(GEOID == "49011"|
+           GEOID == "49035"|
+           GEOID=="49043"|
+           GEOID=="49045"|
+           GEOID=="49049"|
+           GEOID=="49057") %>%
+  mutate(NAME = str_replace(NAME, ", Utah", ""),
+         pct_unemp = unemp_estimate/tot_estimate) %>% 
+  ggplot(aes(x = year, y = pct_unemp, color = NAME))+
+  geom_line(size= 1)+
+  labs(title = "Unemployment Percentage in the Civilian Labor Force by County per Year", x = "Year", y = "Percentage")+
+  scale_y_continuous(labels = percent)
 
 ```
 
 
 
 
-```{r avg med inc county, echo=FALSE, message=FALSE, warning=FALSE}
 
-pov_county %>% 
-  group_by(county1) %>% 
-  filter(county1 == "Davis"|
-           county1 == "Salt Lake"| 
-         county1 == "Summit"|
-         county1=="Tooele"|
-         county1 == "Utah"|
-         county1 == "Weber") %>% 
-  summarize(avg_median_income = mean(median_household_income, na.rm = TRUE)) %>% 
-  ggplot(aes(x = reorder(county1, -avg_median_income), y = avg_median_income, fill = factor(avg_median_income)))+
-  geom_bar(stat = "identity")+
-  labs(title = "Average Median Income by County", x = "County", y = "Average Median Income")+
-  scale_y_continuous(labels = dollar)+ 
-  scale_fill_brewer(palette = "Reds", guide = FALSE)
+
+
+
+```{r Med hh income, echo=FALSE, message=FALSE, warning=FALSE}
+
+acs_pov %>% 
+  separate(state_county_name, c("county"), sep = "\\(", remove = FALSE) %>% 
+  filter(county_id == "49011"|
+           county_id == "49035"|
+           county_id=="49043"|
+           county_id=="49045"|
+           county_id=="49049"|
+           county_id=="49057") %>% 
+  ggplot(aes(x = year, y = med_hh_inc, color = county))+
+  geom_line(size = 1)+
+  labs(title = "Median Household Income Over Time", x = "Year", y = "Median Income", color = "")
+
+```
+
+
+```{r med inc map,echo=FALSE, message=FALSE, warning=FALSE}
+
+map %>% 
+  ggplot(aes(fill = med_hh_inc, color = med_hh_inc))+
+  geom_sf()+
+  scale_fill_viridis_c() +  
+  scale_color_viridis_c()+
+  labs(title = "Median Income Across Counties")
 
 ```
 
@@ -381,6 +428,56 @@ pov_city %>%
 
 
 
+```{r poverty over time,echo=FALSE, message=FALSE, warning=FALSE}
+
+acs_pov %>% 
+  separate(state_county_name, c("county"), sep = "\\(", remove = FALSE) %>% 
+  filter(county_id == "49011"|
+           county_id == "49035"|
+           county_id=="49043"|
+           county_id=="49045"|
+           county_id=="49049"|
+           county_id=="49057") %>% 
+  ggplot(aes(x = year, y = all_ages_in_poverty_percent, color = county))+
+  geom_line(size = 1)+
+  labs(title = "Poverty Rates Over Time", x = "Year",  y = "Percentage", color = "")
+
+```
+
+
+
+
+
+
+```{r poverty rate map,echo=FALSE, message=FALSE, warning=FALSE}
+
+map %>% 
+  ggplot(aes(fill = all_ages_in_poverty_percent, color = all_ages_in_poverty_percent))+
+  geom_sf()+
+  scale_fill_viridis_c() +  
+  scale_color_viridis_c()+
+  labs(title = "Poverty Rates Across Counties")
+
+```
+
+
+```{r wic, echo=FALSE, message=FALSE, warning=FALSE}
+
+wic1 <- wic %>% separate(location_1, c("address","city1","geo"), sep = "\\n", remove = FALSE) %>% 
+  separate(city1, c("city","state"), sep="\\,", remove = FALSE )
+
+wic1 %>% 
+  group_by(health_department) %>% 
+  count() %>% 
+  ggplot(aes(x = reorder(health_department,n), y= n , fill = n)) +
+  geom_bar(stat = "identity")+
+  labs(title = " Distribution of WIC Clinics in Utah",
+       x = "WIC Clinic Locations", y = "Count")+
+  scale_fill_gradient(low = "red", high = "darkred", guide = FALSE)+
+  coord_flip()
+
+```
+
 
 ```{r hud total units, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -464,6 +561,8 @@ hud %>%
   scale_fill_gradient(high = "#a50f15", low = "#fcbba1", guide = FALSE)
 ```
 
+
+
 ```{r months from move in, echo=FALSE, message=FALSE, warning=FALSE}
 
 hud %>% 
@@ -483,185 +582,28 @@ hud %>%
 
 
 
-```{r sheltered headcount, echo=FALSE, message=FALSE, warning=FALSE}
+```{r homeless headcounts,echo=FALSE, message=FALSE, warning=FALSE}
 
 homelessness %>% 
-  filter(category == "Sheltered Headcount", type == "Total") %>% 
-  select(county, x2011, x2012, x2013, x2014) %>% 
-  gather("years", "count", 2:5) %>% 
+  filter(county == "Davis"|county=="Salt Lake"|county=="Tooele"|county=="Weber & Morgan") %>% 
+  filter(type=="Total") %>% 
+  filter(category=="Sheltered Headcount"|category=="Unsheltered Headcount") %>% 
+  select(county,category,x2011,x2012,x2013,x2014) %>% 
+  gather("years","count", 3:6) %>% 
   mutate(years = case_when(years == "x2011"~"2011",
                            years == "x2012"~"2012",
                            years == "x2013"~"2013",
                            years == "x2014"~"2014"),
-         years = as.numeric(years)) %>%
+         years = as.numeric(years)) %>% 
   ggplot(aes(x = years, y = count, color = county))+
-  geom_line(size =1) +
-  labs(title = "Sheltered homeless headcounts over time", 
-       x = "Years", y = "Sheltered Homeless Headcount")
+  geom_line(size = 1.1)+
+  facet_wrap(vars(category), scales = "free_y")+
+  labs(title = " Homeless Headcounts over Time", x = "Years", y = "Headcount", color = "County")
 
 ```
 
 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-homelessness %>% 
-  filter(category == "Unsheltered Headcount", type == "Total") %>% 
-  select(county, x2011, x2012, x2013, x2014) %>% 
-  gather("years", "count", 2:5) %>% 
-  mutate(years = case_when(years == "x2011"~"2011",
-                           years == "x2012"~"2012",
-                           years == "x2013"~"2013",
-                           years == "x2014"~"2014"),
-         years = as.numeric(years)) %>%
-  ggplot(aes(x = years, y = count, color = county))+
-  geom_line(size =1) +
-  labs(title = "Unsheltered homeless headcount over time", 
-       x = "Years", y = "Unsheltered Homeless Headcount")+
-  
 
 
-
-homelessness %>% 
-  filter(type =="Total",
-         category == "Unsheltered Headcount"| category=="Sheltered Headcount") %>% 
-  print()
-
-
-  
-
-```
-
-
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-emp_tot <- map_df(2012:2017, function(x){
-  get_acs(geography = "county",
-          variables = c(tot = "B23025_001"),
-          state = "UT",
-          survey = "acs1",
-          year = x) %>% 
-    mutate(year = x) %>% 
-    rename(tot_estimate = estimate,
-           tot_moe = moe) %>% 
-    select(-variable)
-})
-
-unemp<- map_df(2012:2017, function(x){
-  get_acs(geography = "county",
-          variables = c(unemp = "B23025_007"),
-          state = "UT",
-          survey = "acs1",
-          year = x) %>% 
-    mutate(year = x) %>% 
-    rename(unemp_estimate = estimate,
-           unemp_moe = moe) %>% 
-    select(-variable)
-})
-
-emp <- left_join(emp_tot,unemp)
-
-emp %>% 
-  mutate(NAME = str_replace(NAME, ", Utah", ""),
-         pct_unemp = unemp_estimate/tot_estimate) %>% 
-  ggplot(aes(x = year, y = pct_unemp, color = NAME))+
-  geom_line(size= 1)+
-  labs(title = "Unemployment Percentage by County per Year", x = "Year", y = "Percentage")+
-  scale_y_continuous(labels = percent)
-
-```
-
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-median_income <- map_df(2012:2017, function(x){
-  get_acs(geography = "county",
-          variables = c(hhincome = "B19013_001"),
-          state = "UT",
-          survey = "acs1",
-          year = x) %>% 
-    mutate(year = x) 
-})
-
-median_income %>% 
-  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
-  ggplot(aes(x = year, y= estimate, color = NAME))+
-  geom_line(size =1)+
-  labs(title = "Median Household income", x = "Year", y = "Income")+
-  scale_y_continuous(labels = dollar)
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-family_income <- map_df(2012:2017, function(x){
-  get_acs(geography = "county",
-          variables = c(famincome = "B19101_001"),
-          state = "UT",
-          survey = "acs1",
-          year = x) %>% 
-    mutate(year = x) 
-})
-
-family_income %>% 
-  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
-  ggplot(aes(x = year, y= estimate, color = NAME))+
-  geom_line(size =1)+
-  labs(title = "Family income", x = "Year", y = "Income")+
-  scale_y_continuous(labels = dollar)
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-family_income_5 <- get_acs(geography = "county",
-                           variables = c(famincome = "B19101_001"),
-                           state = "UT",
-                           survey = "acs5",
-                           geometry = TRUE)
-
-
-family_income_5 %>% 
-  mutate(NAME = str_replace(NAME, ", Utah", "")) %>% 
-  ggplot(aes(x = reorder(NAME, -estimate),y = estimate)) + 
-  geom_errorbar(aes(ymin = estimate - moe, ymax = estimate + moe)) + 
-  geom_point(size = 3, color = "red")+
-  labs(title = "Family Income per County", x = "County",  y ="Family Income")+
-  scale_y_continuous(labels = dollar)
-
-
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-family_income_5 %>% 
-  ggplot(aes(fill = estimate, color = estimate))+
-  geom_sf()+
-  scale_fill_viridis_c() +  
-  scale_color_viridis_c()+
-  labs(title = "Family income across cities in UT")
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-family_income_tracts <- get_acs(geography = "tract",
-                                variables = c(famincome = "B19101_001"),
-                                state = "UT",
-                                survey = "acs5",
-                                geometry = TRUE)
-
-
-
-
-family_income_tracts %>% 
-  ggplot(aes(fill = estimate, color = estimate))+
-  geom_sf()+
-  scale_fill_viridis_c() +  
-  scale_color_viridis_c()+
-  labs(title = "Family income across census tracts in UT")
-
-```
 

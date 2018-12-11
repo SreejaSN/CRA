@@ -25,3 +25,5 @@ tidycensus
 bindrcpp
 tigris
 scales
+gridExtra
+RColorBrewer
