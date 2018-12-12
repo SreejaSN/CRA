@@ -145,6 +145,9 @@ unemp<- map_df(2012:2017, function(x){
 emp <- left_join(emp_tot,unemp)
 
 getPalette = colorRampPalette(brewer.pal(9, "Reds"))
+
+dwelling <- read_xlsx(path(datapath,"Ivory_boyer_new_dwelling.xlsx")) %>% clean_names()
+
 ```
 
 ## Education 
@@ -612,6 +615,33 @@ wic1 %>%
 
 
 ```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+dwelling %>% 
+  ggplot(aes(x = reorder(county,-new_dwelling_units_total), y = new_dwelling_units_total, fill = new_dwelling_units_total))+
+  geom_bar(stat = "identity")+
+  labs(title = "New Dwelling Units in 2017", x = "County", y = "Dwelling Units")+
+  scale_fill_gradient(high = "#a50f15", low = "#fcbba1", guide = FALSE)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+dwelling %>% 
+  mutate(fillcolor = case_when(new_dwelling_units_percent_change>0~"positive",
+                               new_dwelling_units_percent_change<0~"negative")) %>% 
+  ggplot(aes(x = county, y = (new_dwelling_units_percent_change/100), fill = fillcolor))+
+  geom_bar(stat = "identity")+
+  labs(title = "Percent Change in New Dwellings", subtitle = "2016 to 2017", x ="County", y = "Percent Change")+
+  scale_fill_manual(values = c("#CB0000","#7caa2d"), guide = FALSE)+
+  scale_y_continuous(labels = percent)
+
+```
+
 
 
 Salt Lake County has the most number of units under HUD programs. Tooele County has the least. 
