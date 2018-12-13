@@ -179,7 +179,7 @@ edu_18_to_24%>%
                                            "total_estimate_bachelor_s_degree_or_higher"))) %>% 
   ggplot(aes(x = county, y = (pct_estimate/100), fill = education_lvl))+
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Distribution of Education by County", subtitle = "Among 18-24 year-olds", x = "County", y = " Percent")+
+  labs(title = "Distribution of Education by County", subtitle = "Among 18-24 year-olds", x = "", y = " Percent")+
   scale_fill_brewer(name ="", 
                     palette = "YlOrRd",
                     breaks = c("total_estimate_less_than_high_school_graduate",
@@ -222,7 +222,7 @@ edu_above_25 %>%
                                            "total_estimate_population_25_years_and_over_graduate_or_professional_degree"))) %>% 
   ggplot(aes(x = county, y = (pct_estimate/100), fill = education_lvl))+
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Distribution of Education by County", subtitle = "25 years and over",x = "County", y = "Percent")+
+  labs(title = "Distribution of Education by County", subtitle = "25 years and over",x = "", y = "Percent")+
   scale_fill_brewer(name ="", 
                     palette = "YlOrRd",
                     breaks = c("total_estimate_less_than_high_school_graduate",
@@ -259,7 +259,7 @@ emp %>%
          pct_unemp = unemp_estimate/tot_estimate) %>% 
   ggplot(aes(x = reorder(NAME, -pct_unemp), y = pct_unemp, fill = NAME))+
   geom_bar(stat= "identity")+
-  labs(title = "Unemployment Percentage in the Civilian Labor Force", x = "Year", y = "Percentage")+
+  labs(title = "Unemployment Percentage in the Civilian Labor Force", x = "", y = "Percentage")+
   scale_y_continuous(labels = percent)+
   scale_fill_brewer(palette = "Set1", guide = FALSE)
 
@@ -280,7 +280,7 @@ emp %>%
          pct_unemp = unemp_estimate/tot_estimate) %>% 
   ggplot(aes(x = year, y = pct_unemp, color = NAME))+
   geom_line(size= 1)+
-  labs(title = "Unemployment Percentage in the Civilian Labor Force", subtitle = "By county over time", x = "Year", y = "Percentage", color = "")+
+  labs(title = "Unemployment Percentage in the Civilian Labor Force", subtitle = "By County over Time", x = "Years", y = "Percentage", color = "")+
   scale_y_continuous(labels = percent)+
   scale_color_brewer(palette = "Set1")
   
@@ -302,7 +302,7 @@ acs_pov %>%
            county_id=="49057") %>% 
   ggplot(aes(x = year, y = med_hh_inc, color = county))+
   geom_line(size = 1)+
-  labs(title = "Median Household Income Over Time", x = "Year", y = "Median Income", color = "")+
+  labs(title = "Median Household Income Over Time", x = "Years", y = "Median Income", color = "")+
   scale_color_brewer(palette = "Set1")+
   scale_y_continuous(labels = comma)
   
@@ -317,7 +317,9 @@ map %>%
   ggplot(aes(fill = med_hh_inc))+
   geom_sf()+
   scale_fill_viridis_c("Median Household Income") +  
-  labs(title = "Median Income Across Counties")
+  coord_sf(datum = NA)+
+  labs(title = "Median Income Across Counties", x = "", y = "")+
+  geom_sf_text(aes(label = NAME),size =2)
   
 
 ```
@@ -577,7 +579,7 @@ acs_pov %>%
            county_id=="49057") %>% 
   ggplot(aes(x = year, y = all_ages_in_poverty_percent, color = county))+
   geom_line(size = 1)+
-  labs(title = "Poverty Rates Over Time", x = "Year",  y = "Percentage", color = "")
+  labs(title = "Poverty Rates Over Time", x = "Years",  y = "Percentage", color = "")
 
 ```
 
@@ -589,8 +591,10 @@ The highest poverty rate in Utah is in San Juan county.
 map %>% 
   ggplot(aes(fill = all_ages_in_poverty_percent))+
   geom_sf()+
+  coord_sf(datum = NA)+
   scale_fill_viridis_c("Poverty Rate") +  
-  labs(title = "Poverty Rate Across Counties")
+  labs(title = "Poverty Rate Across Counties", x= "", y = "" )+
+  geom_sf_text(aes(label = NAME), size =2)
   
 
 ```
@@ -617,7 +621,7 @@ wic1 %>%
 ```
 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+```{r dwelling units,echo=FALSE, message=FALSE, warning=FALSE}
 
 
 dwelling %>% 
@@ -629,7 +633,7 @@ dwelling %>%
 ```
 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+```{r oct chnage dwelling, echo=FALSE, message=FALSE, warning=FALSE}
 
 dwelling %>% 
   mutate(fillcolor = case_when(new_dwelling_units_percent_change>0~"positive",
@@ -649,21 +653,23 @@ Salt Lake County has the most number of units under HUD programs. Tooele County 
 ```{r hud total units, echo=FALSE, message=FALSE, warning=FALSE}
 
 hud %>% 
-  filter(name!="No county code", 
-         total_units > quantile(total_units, 0.25, na.rm = T)) %>% 
   filter(name == "Davis County"|
            name == "Salt Lake County"|
            name == "Summit County"|
            name == "Tooele County"|
            name == "Utah County"|
            name == "Weber County") %>% 
-  ggplot(aes(x = reorder(name, -total_units), y = total_units, fill = total_units))+
+  ggplot(aes(x = name, y = total_units, fill = name))+
   geom_bar(stat = "identity")+
-  labs(title = "Total Number of Units by County and HUD Program",  
-       x = "County", y = "Total Units")+
   facet_wrap(vars(program_label), scales = "free_y")+
-  scale_fill_gradient(high = "#a50f15", low = "#fcbba1", guide = FALSE)+
-  scale_y_continuous(labels = comma)
+  scale_fill_brewer(palette = "Set1", guide = FALSE)+
+  scale_y_continuous(labels = comma)+
+  labs(x = "", y = "Total Units", title = "Total Number of Units", subtitle = "By County and HUD Program")+
+  theme(axis.text.x = element_text(size =8),
+        axis.text.y = element_text(size =8),
+        strip.text = element_text(size = 8),
+        axis.title.y = element_text(size = 8))
+  
 
 
 ```
@@ -674,20 +680,24 @@ This plot shows the burden on HUD. Most programs show close to 100% occupancy.
 ```{r hud pct occupied, echo=FALSE, message=FALSE, warning=FALSE}
 
 hud %>% 
-  filter(name!="No county code", 
-         pct_occupied > 0) %>% 
+  filter(pct_occupied > 0) %>% 
   filter(name == "Davis County"|
            name == "Salt Lake County"|
            name == "Summit County"|
            name == "Tooele County"|
            name == "Utah County"|
            name == "Weber County") %>% 
-  ggplot(aes(x = reorder(name, -pct_occupied), y = pct_occupied, fill = pct_occupied))+
+  ggplot(aes(x = name, y = pct_occupied, fill = name))+
   geom_bar(stat = "identity")+
-  labs(title = "Percent Occupied by County and HUD Program",  
-       x = "County", y = "Percent Occupied")+
+  labs(title = "Percent Units Occupied", subtitle = "By County and HUD Program",  
+       x = "", y = "Percent Occupied")+
   facet_wrap(vars(program_label), scales = "free_y")+
-  scale_fill_gradient(high = "#a50f15", low = "#fcbba1", guide = FALSE)
+  scale_fill_brewer(palette = "Set1", guide = FALSE)+
+  theme(axis.text.x = element_text(size =8),
+        axis.text.y = element_text(size =8),
+        strip.text = element_text(size = 8),
+        axis.title.y = element_text(size = 8))
+  
 
 ```
 
@@ -698,17 +708,22 @@ Most counties (except Summit) have a pretty long wait time, especially when it c
 ```{r hud months waiting, echo=FALSE, message=FALSE, warning=FALSE}
 
 hud %>% 
+  filter(months_waiting>0) %>% 
   filter(name == "Davis County"|
            name == "Salt Lake County"|
            name == "Summit County"|
            name == "Tooele County"|
            name == "Utah County"|
            name == "Weber County") %>% 
-  ggplot(aes(x=reorder(name,-months_waiting), y = months_waiting, fill =months_waiting))+
+  ggplot(aes(x=name, y = months_waiting, fill =name))+
   geom_bar(stat = "identity")+
-  labs(title = "Months Waiting by County and Program", x = "County", y="Months")+
+  labs(title = "Months Waiting" , subtitle = "By County and Program", x = "", y="Months")+
   facet_wrap(vars(program_label), scales = "free_y")+
-  scale_fill_gradient(high = "#a50f15", low = "#fcbba1", guide = FALSE)
+  scale_fill_brewer(palette = "Set1", guide = FALSE)+
+  theme(axis.text.x = element_text(size =8),
+        axis.text.y = element_text(size =8),
+        strip.text = element_text(size = 8),
+        axis.title.y = element_text(size = 8))
 ```
 
 
@@ -718,17 +733,22 @@ Summit County has the highest months from move in time, close to 15 months for h
 ```{r months from move in, echo=FALSE, message=FALSE, warning=FALSE}
 
 hud %>% 
+  filter(months_from_movein>0) %>% 
   filter(name == "Davis County"|
            name == "Salt Lake County"|
            name == "Summit County"|
            name == "Tooele County"|
            name == "Utah County"|
            name == "Weber County") %>%
-  ggplot(aes(x=reorder(name,-months_from_movein), y = months_from_movein, fill =months_from_movein))+
+  ggplot(aes(x=name, y = months_from_movein, fill =name))+
   geom_bar(stat = "identity")+
   labs(title = "Months from Move In by County and Program", x = "County", y="Months")+
   facet_wrap(vars(program_label), scales = "free_y")+
-  scale_fill_gradient(high = "#a50f15", low = "#fcbba1", guide = FALSE)
+  scale_fill_brewer(palette = "Set1", guide = FALSE)+
+  theme(axis.text.x = element_text(size =8),
+        axis.text.y = element_text(size =8),
+        strip.text = element_text(size = 8),
+        axis.title.y = element_text(size = 8))
 
 ```
 
