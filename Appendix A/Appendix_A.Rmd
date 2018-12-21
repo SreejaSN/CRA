@@ -26,7 +26,9 @@ library(gridExtra)
 library(RColorBrewer)
 
 theme_set(theme_minimal())
+
 theme_update(text = element_text(family = "Roboto"), axis.text = element_text(family = "Roboto"), strip.text = element_text(family = "Roboto"), axis.text.x = element_text(angle = 45, hjust = 1))
+
 options(scipen = 100)
 
 si_knitr_settings()
@@ -89,15 +91,7 @@ acs_pov <- read.csv(path(datapath, "SAIPESNC_11DEC18_05_20_11_35.csv"), stringsA
 
 acs_pov$med_hh_inc <- as.numeric(str_replace(acs_pov$med_hh_inc, ",", ""))
 
-ut <- counties(state = "UT", class = "sf")
-
-map_pov <- acs_pov %>% 
-  filter(year == "2017") %>% 
-  filter(county_id!="0", county_id!="49000") %>% 
-  rename(GEOID = county_id) %>% 
-  mutate(GEOID = as.character(GEOID))
-
-map <- left_join(map_pov,ut)
+map <- read_rds("G:/My Drive/SI/Current Projects/CRA Needs Assessment/WS 2_Analysis of Publicly Available Data/Data/map.rds")
 
 poverty <- read.csv(path(datapath,"Poverty_data_by_Age__City_and_County_Utah_2013.csv")) %>% clean_names()
 
@@ -116,33 +110,17 @@ hud <- hud %>%
                                  levels = c("Summary of All HUD Programs", "Housing Choice Vouchers",
                                             "LIHTC","Mod Rehab", "Multi-Family Other","Public Housing",
                                             "Section 236","Section 8 NC/SR")))
+emp <-  read_rds("G:/My Drive/SI/Current Projects/CRA Needs Assessment/WS 2_Analysis of Publicly Available Data/Data/emp.rds")
 
-emp_tot <- map_df(2012:2017, function(x){
-  get_acs(geography = "county",
-          variables = c(tot_civilian = "B23025_003"),
-          state = "UT",
-          survey = "acs1",
-          year = x) %>% 
-    mutate(year = x) %>% 
-    rename(tot_estimate = estimate,
-           tot_moe = moe) %>% 
-    select(-variable)
-})
-
-unemp<- map_df(2012:2017, function(x){
-  get_acs(geography = "county",
-          variables = c(unemp = "B23025_007"),
-          state = "UT",
-          survey = "acs1",
-          year = x) %>% 
-    mutate(year = x) %>% 
-    rename(unemp_estimate = estimate,
-           unemp_moe = moe) %>% 
-    select(-variable)
-})
-
-
-emp <- left_join(emp_tot,unemp)
+emp1 <- emp %>% 
+  filter(GEOID == "49011"|
+           GEOID == "49035"|
+           GEOID=="49043"|
+           GEOID=="49045"|
+           GEOID=="49049"|
+           GEOID=="49057") %>%
+  mutate(NAME = str_replace(NAME, ", Utah", ""),
+         pct_unemp = unemp_estimate/tot_estimate) 
 
 getPalette = colorRampPalette(brewer.pal(9, "Reds"))
 
@@ -246,22 +224,18 @@ edu_above_25 %>%
 in 2017, Weber County had the highest unemployment percentage among the civilian labor force. 
 
 ```{r unemp pct, echo=FALSE, message=FALSE, warning=FALSE}
+
+countyCol = brewer.pal(6, "Set1")
+
+names(countyCol) <- levels(as.factor(emp1$NAME))
  
-emp %>% 
+emp1 %>% 
   filter(year == "2017") %>% 
-  filter(GEOID == "49011"|
-           GEOID == "49035"|
-           GEOID=="49043"|
-           GEOID=="49045"|
-           GEOID=="49049"|
-           GEOID=="49057") %>%
-  mutate(NAME = str_replace(NAME, ", Utah", ""),
-         pct_unemp = unemp_estimate/tot_estimate) %>% 
   ggplot(aes(x = reorder(NAME, -pct_unemp), y = pct_unemp, fill = NAME))+
   geom_bar(stat= "identity")+
   labs(title = "Unemployment Percentage in the Civilian Labor Force", x = "", y = "Percentage")+
   scale_y_continuous(labels = percent)+
-  scale_fill_brewer(palette = "Set1", guide = FALSE)
+  scale_fill_manual(values = countyCol, guide = FALSE)
 
 
 ```
@@ -282,7 +256,7 @@ emp %>%
   geom_line(size= 1)+
   labs(title = "Unemployment Percentage in the Civilian Labor Force", subtitle = "By County over Time", x = "Years", y = "Percentage", color = "")+
   scale_y_continuous(labels = percent)+
-  scale_color_brewer(palette = "Set1")
+  scale_color_manual(values = countyCol)
   
 
 ```
@@ -311,7 +285,7 @@ acs_pov %>%
 
 This map shows that Summit County has the highest median household income in Utah and the lowest being Piute County. 
 
-```{r med inc map,echo=FALSE, message=FALSE, warning=FALSE}
+```{r med inc map, echo=FALSE, message=FALSE, warning=FALSE}
 
 map %>% 
   ggplot(aes(fill = med_hh_inc))+
@@ -481,6 +455,29 @@ pov_county %>%
   scale_fill_brewer(palette = "Reds", guide = FALSE)+
   scale_y_continuous(labels = comma)
 
+
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+pov_county %>%  
+  group_by(county1) %>% 
+  filter(county1 == "Davis"|
+           county1 == "Salt Lake"| 
+         county1 == "Summit"|
+         county1=="Tooele"|
+         county1 == "Utah"|
+         county1 == "Weber") %>%
+  summarize(below_poverty_level = sum(below_poverty_level, na.rm = TRUE)) %>% 
+  ggplot(aes(x = reorder(county1, -below_poverty_level), y = below_poverty_level, fill = factor(below_poverty_level)))+
+  geom_bar(stat = "identity")+
+  labs(title = "Total Population Below Poverty Level by County", x = "County", y = "Population")+ 
+  scale_fill_brewer(palette = "Reds", guide = FALSE)+
+  scale_y_continuous(labels = comma)
+
+
 ```
 
 
@@ -579,14 +576,15 @@ acs_pov %>%
            county_id=="49057") %>% 
   ggplot(aes(x = year, y = all_ages_in_poverty_percent, color = county))+
   geom_line(size = 1)+
-  labs(title = "Poverty Rates Over Time", x = "Years",  y = "Percentage", color = "")
+  labs(title = "Poverty Rates Over Time", x = "Years",  y = "Percentage", color = "")+
+  scale_color_brewer(palette = "Set1")
 
 ```
 
 
 The highest poverty rate in Utah is in San Juan county. 
 
-```{r poverty rate map,echo=FALSE, message=FALSE, warning=FALSE}
+```{r poverty rate map, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 
 map %>% 
   ggplot(aes(fill = all_ages_in_poverty_percent))+
@@ -772,7 +770,8 @@ homelessness %>%
   ggplot(aes(x = years, y = count, color = county))+
   geom_line(size = 1.1)+
   facet_wrap(vars(category), scales = "free_y")+
-  labs(title = " Homeless Headcounts over Time", x = "Years", y = "Headcount", color = "")
+  labs(title = " Homeless Headcounts over Time", x = "Years", y = "Headcount", color = "")+
+  scale_color_brewer(palette = "Set1")
 
 ```
 
